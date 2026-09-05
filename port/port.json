@@ -1,0 +1,18 @@
+{
+  "version": 2,
+  "name": "jellyfinrg35xx.zip",
+  "items": ["Jellyfin RG35XX.sh", "jellyfinrg35xx"],
+  "items_opt": null,
+  "attr": {
+    "title": "Jellyfin RG35XX",
+    "desc": "Browse your Jellyfin library on the RG35XX H.",
+    "inst": "Ready to run.",
+    "genres": ["media"],
+    "porter": ["Community"],
+    "image": {},
+    "rtr": true,
+    "runtime": null,
+    "reqs": [],
+    "arch": ["aarch64"]
+  }
+}

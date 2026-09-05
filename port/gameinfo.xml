@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<gameList>
+  <game>
+    <path>./Jellyfin RG35XX.sh</path>
+    <name>Jellyfin RG35XX</name>
+    <desc>Browse and watch your Jellyfin library.</desc>
+    <genre>Media</genre>
+  </game>
+</gameList>

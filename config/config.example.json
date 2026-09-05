@@ -1,0 +1,8 @@
+{
+  "serverUrl": "https://your-jellyfin-server.example",
+  "username": "your-username",
+  "password": "your-password",
+  "quality": "480p",
+  "clientName": "RG35XX H Jellyfin",
+  "deviceName": "RG35XX H"
+}

@@ -1,0 +1,5 @@
+name=Jellyfin RG35XX
+summary=Controller-first Jellyfin client
+desc=Browse and watch your Jellyfin library on the RG35XX H.
+runtime=none
+availability=ready

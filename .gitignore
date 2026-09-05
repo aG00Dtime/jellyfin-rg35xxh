@@ -1,0 +1,29 @@
+# Personal Jellyfin connection details
+config.json
+*.env
+*.env.*
+
+# Python and test output
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.verify/
+
+# Packages and local build products
+*.zip
+build/
+build-arm64/
+
+# Device recovery copies, platform tools, and diagnostic logs
+recovery-*/
+platform-tools/
+platform-tools.zip
+*.log
+Dockerfile
+format-sd2.sh
+restore-sd2-config.ps1
+
+# Local editor and operating-system files
+.DS_Store
+Thumbs.db
+.vscode/
