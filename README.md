@@ -63,6 +63,17 @@ This is a community project and it is still evolving. It has been tested on an R
 
 ## For contributors
 
+## License and attribution
+
+This project is licensed under the [MIT License](LICENSE). If you copy, modify,
+or redistribute the software, you must retain the copyright and license notice
+included in `LICENSE`.
+
+The project is unofficial and is not affiliated with Jellyfin or KNULLI. The
+Jellyfin icon and DejaVu Sans font are third-party assets with their own notices
+and licensing requirements; see the attribution notes below and the files in
+`app/assets/`.
+
 The app is Python and pygame. On Windows, run:
 
 ```powershell
