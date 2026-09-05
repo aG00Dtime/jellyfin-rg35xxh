@@ -25,6 +25,10 @@ rm -f "$GAMEDIR/JellyfinRG35XX.sh"
 if [ -f "$GAMEDIR/cover.png" ]; then
   mkdir -p "$PM_IMAGES"
   cp -f "$GAMEDIR/cover.png" "$PM_IMAGES/jellyfinrg35xx.screenshot.png"
+  PM_INDEX="$PM_IMAGES/images.json"
+  if [ -f "$PM_INDEX" ] && ! grep -q 'jellyfinrg35xx.screenshot.png' "$PM_INDEX"; then
+    sed -i '/"gmu.music.player.screenshot.jpg",/a\            "jellyfinrg35xx.screenshot.png",' "$PM_INDEX"
+  fi
 fi
 # Python bytecode from a manually copied update can have the same timestamp as
 # its source. Regenerate this tiny cache each launch so KNULLI always uses the
