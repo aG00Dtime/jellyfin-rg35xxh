@@ -261,6 +261,7 @@ class PlaybackSession:
         self.started = False
         self.paused = False
         self.next_report = 0
+        self.completed = False
 
     def _receive(self):
         self.ipc.poll()
@@ -342,6 +343,7 @@ class PlaybackSession:
                     time.sleep(0.005)
             if not stop_requested and (self.ipc.failed or not self.started):
                 raise RuntimeError("Video playback failed; returned to the library")
+            self.completed = not stop_requested and self.started and not self.ipc.failed
         finally:
             # This also runs if the controller, IPC parser, or UI raises an error.
             try:

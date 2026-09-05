@@ -242,7 +242,7 @@ class Renderer:
             self.card(item, rect, artwork, first + offset == selected, not portrait)
         if page.get("more"):
             self.text("More titles load as you browse", 18, 411, 580, self.small, MUTED)
-        self.footer("D-pad  Browse     A  Open     Y  Search     B  Back     Start  Exit")
+        self.footer("D-pad  Browse     A  Open     X  Watched     Y  Search     B  Back     Start  Exit")
 
     def detail(self, item, artwork, status, options=None):
         self.header(False)
@@ -263,7 +263,7 @@ class Renderer:
         else:
             self.text("This media type is not playable yet", 185, 370, 429, self.small, MUTED)
         self.text(status, 18, 414, 600, self.small, MUTED)
-        self.footer("A  Play / Resume     X  Play options     B  Back     Start  Exit")
+        self.footer("A  Play / Resume     X  Watched     B  Back     Start  Exit")
         if options:
             pygame.draw.rect(self.screen, (30, 32, 41), (174, 268, 452, 150), border_radius=8)
             self.text("Play options", 192, 282, 400, self.heading)
@@ -451,6 +451,27 @@ class LibraryUI:
             self.start("Loading details...", lambda: self.api.detail(item),
                        lambda value: self.pages.append(dict(kind="detail", item=value, options=None, track_options=None)))
 
+    def toggle_played(self, item):
+        played = not bool((item.get("UserData") or {}).get("Played"))
+        label = "Marking watched..." if played else "Marking unwatched..."
+        def done(value):
+            self.status = "Marked watched" if played else "Marked unwatched"
+            if self.pages and self.pages[-1].get("kind") == "detail":
+                self.pages[-1]["item"] = value
+        self.start(label, lambda: self.api.set_played(item, played), done)
+
+    def play_episode_chain(self, item, prepared=None):
+        self.screen, self.status, self.reporter = self.play_item(
+            self.config, self.api.token, self.api.user_id, item, prepared=prepared)
+        if item.get("_PlaybackCompleted") and item.get("Type") == "Episode":
+            next_item = self.api.next_episode(item)
+            if next_item:
+                self.status = "Playing next episode..."
+                next_prepared = self.prepare_playback(
+                    self.config, self.api.token, self.api.user_id, next_item)
+                self.play_episode_chain(next_item, next_prepared)
+        item.pop("_PlaybackCompleted", None)
+
     def options_for(self, item):
         streams = ((item.get("MediaSources") or [{}])[0].get("MediaStreams")
                    or item.get("MediaStreams") or [])
@@ -605,8 +626,7 @@ class LibraryUI:
                 self.status = "Saving previous playback..."
                 return
             def ready(prepared):
-                self.screen, self.status, self.reporter = self.play_item(
-                    self.config, self.api.token, self.api.user_id, item, prepared=prepared)
+                self.play_episode_chain(item, prepared)
                 self.renderer.screen = self.screen
                 self.return_home_refresh = True
                 self.direction = (0, 0)
@@ -694,11 +714,11 @@ class LibraryUI:
                         break
                     elif event.button == 6:
                         if self.pages and self.pages[-1]["kind"] == "detail":
-                            page = self.pages[-1]
-                            page["options"] = page.get("track_options") or self.options_for(page["item"])
-                            page["track_options"] = page["options"]
+                            self.toggle_played(self.pages[-1]["item"])
                         elif self.pages and self.pages[-1]["kind"] == "list":
-                            self.more(self.pages[-1])
+                            page = self.pages[-1]
+                            if page["items"]:
+                                self.toggle_played(page["items"][page["selection"]])
                         elif self.api:
                             self.refresh()
                     elif event.button in (5, 7):

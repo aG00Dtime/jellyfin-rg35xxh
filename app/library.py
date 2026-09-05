@@ -119,6 +119,29 @@ class LibraryAPI:
     def detail(self, item):
         return self.get("/Users/" + self.user_id + "/Items/" + item["Id"], Fields="MediaSources,MediaStreams,Overview,RunTimeTicks,UserData")
 
+    def set_played(self, item, played):
+        path = "/Users/" + self.user_id + "/PlayedItems/" + item["Id"]
+        method = requests.post if played else requests.delete
+        with method(self.server + path, headers=self.headers, timeout=(4, 12), verify=self.verify) as response:
+            response.raise_for_status()
+        item.setdefault("UserData", {})["Played"] = bool(played)
+        if played:
+            item["UserData"]["PlaybackPositionTicks"] = 0
+        return item
+
+    def next_episode(self, item):
+        series_id = item.get("SeriesId") or item.get("SeriesId")
+        season_id = item.get("SeasonId")
+        index = item.get("IndexNumber")
+        if not series_id or not season_id or index is None:
+            return None
+        result = self.get("/Shows/" + series_id + "/Episodes", UserId=self.user_id,
+                          SeasonId=season_id, Fields=FIELDS, Limit=200,
+                          SortBy="IndexNumber", SortOrder="Ascending")
+        episodes = result.get("Items", [])
+        return next((episode for episode in episodes
+                     if episode.get("IndexNumber") == index + 1), None)
+
 
 def image_candidates(item, landscape):
     """Use server library artwork and episode/series artwork like jellyfin-web."""

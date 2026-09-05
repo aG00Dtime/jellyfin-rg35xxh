@@ -220,6 +220,7 @@ def play_item(config, token, user_id, item, prepared=None):
         # Release the display to mpv; controls use evdev and never need video focus.
         pygame.display.quit()
         session.run()
+        item["_PlaybackCompleted"] = session.completed
         status = "Saving progress..."
     except Exception as exc:
         LOG.error("Playback failed (%s)", type(exc).__name__)
