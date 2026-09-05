@@ -84,6 +84,4 @@ The app is Python and pygame. On Windows, run:
 
 This creates `jellyfinrg35xx.zip`. Automated checks are in `tests/`; the device-specific verification notes are in [tests/VERIFICATION-1.3.md](tests/VERIFICATION-1.3.md).
 
-Maintainers can publish a new release by pushing a version tag such as `v1.8.0`. GitHub Actions builds `jellyfinrg35xx.zip` and attaches it to the release automatically.
-
 The Jellyfin icon is from [Jellyfin UX](https://github.com/jellyfin/jellyfin-ux), used under Jellyfin's [branding guidance](https://jellyfin.org/docs/project/branding/). The bundled DejaVu Sans font includes its required license in [app/assets/DejaVuSans-LICENSE.txt](app/assets/DejaVuSans-LICENSE.txt).
