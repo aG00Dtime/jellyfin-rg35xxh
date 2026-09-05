@@ -40,6 +40,7 @@ For a later update, copy the new file and folder into the same place and allow y
 | Home and folders | D-pad moves, **A** opens, **B** goes back, **Start** exits |
 | Video | **A** pauses or resumes; **B**, **Start**, or **Select** returns to the app |
 | Video seeking | D-pad left/right skips 10 seconds; L1/R1 skips 30 seconds; L2/R2 skips 60 seconds |
+| Audio and subtitles | **X** cycles audio tracks; **Y** cycles subtitle tracks (including Off) |
 | Volume | The handheld's volume buttons still control KNULLI volume |
 
 The app reports playback to Jellyfin while you watch and when you stop, so **Continue Watching** and resume position stay in sync.

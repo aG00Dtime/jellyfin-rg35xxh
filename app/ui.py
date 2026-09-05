@@ -160,7 +160,7 @@ class Renderer:
             self.text("More titles load as you browse", 18, 411, 580, self.small, MUTED)
         self.footer("D-pad  Browse     A  Open     B  Back     Start  Exit")
 
-    def detail(self, item, artwork, status):
+    def detail(self, item, artwork, status, options=None):
         self.header(False)
         self.card(item, pygame.Rect(18, 110, 144, 240), artwork, False, False, False)
         self.wrap(item.get("SeriesName") or item.get("Name", "Untitled"), 185, 82, 434, 2, self.heading, TEXT)
@@ -179,7 +179,18 @@ class Renderer:
         else:
             self.text("This media type is not playable yet", 185, 370, 429, self.small, MUTED)
         self.text(status, 18, 414, 600, self.small, MUTED)
-        self.footer("A  Play / Resume     B  Back     Start  Exit")
+        self.footer("A  Play / Resume     X  Play options     B  Back     Start  Exit")
+        if options:
+            pygame.draw.rect(self.screen, (30, 32, 41), (174, 268, 452, 150), border_radius=8)
+            self.text("Play options", 192, 282, 400, self.heading)
+            values = [("Play", "Start video"), ("Audio", options["audio"][options["audio_at"]]["label"]),
+                      ("Subtitles", options["subtitles"][options["subtitle_at"]]["label"])]
+            for index, (label, value) in enumerate(values):
+                y = 315 + index * 30
+                if index == options["row"]:
+                    pygame.draw.rect(self.screen, ACCENT, (188, y - 3, 420, 25), border_radius=4)
+                self.text(label, 201, y, 105, self.small, TEXT)
+                self.text(value, 315, y, 280, self.small, TEXT)
 
     def loading(self, label, modal=True):
         if modal:
@@ -285,7 +296,17 @@ class LibraryUI:
             self.start("Opening " + item.get("Name", "folder") + "...", lambda: self.api.children(item), ready)
         else:
             self.start("Loading details...", lambda: self.api.detail(item),
-                       lambda value: self.pages.append(dict(kind="detail", item=value)))
+                       lambda value: self.pages.append(dict(kind="detail", item=value, options=None)))
+
+    def options_for(self, item):
+        streams = ((item.get("MediaSources") or [{}])[0].get("MediaStreams")
+                   or item.get("MediaStreams") or [])
+        def label(stream):
+            return stream.get("DisplayTitle") or stream.get("Language") or stream.get("Codec") or "Unknown"
+        audio = [{"index": s.get("Index"), "label": label(s)} for s in streams if s.get("Type") == "Audio"]
+        subtitles = [{"index": None, "label": "Off"}] + [{"index": s.get("Index"), "label": label(s)} for s in streams if s.get("Type") == "Subtitle"]
+        return {"row": 0, "audio": audio or [{"index": None, "label": "Default"}], "audio_at": 0,
+                "subtitles": subtitles, "subtitle_at": 0}
 
     def more(self, page):
         if not page["more"] or page["paging"]:
@@ -310,6 +331,14 @@ class LibraryUI:
             self.rows.move(x, y)
             return
         page = self.pages[-1]
+        if page["kind"] == "detail" and page.get("options"):
+            options = page["options"]
+            if y: options["row"] = max(0, min(2, options["row"] - y))
+            if x and options["row"] == 1:
+                options["audio_at"] = (options["audio_at"] + x) % len(options["audio"])
+            if x and options["row"] == 2:
+                options["subtitle_at"] = (options["subtitle_at"] + x) % len(options["subtitles"])
+            return
         if page["kind"] != "list":
             return
         columns = 4 if page["portrait"] else 3
@@ -327,9 +356,20 @@ class LibraryUI:
             if page["items"]:
                 self.open_item(page["items"][page["selection"]])
         else:
-            item = self.pages[-1]["item"]
+            page = self.pages[-1]
+            item = page["item"]
             if item.get("Type") not in ("Movie", "Episode", "Video", "MusicVideo"):
                 return
+            if page.get("options"):
+                options = page["options"]
+                if options["row"] == 1:
+                    options["audio_at"] = (options["audio_at"] + 1) % len(options["audio"]); return
+                if options["row"] == 2:
+                    options["subtitle_at"] = (options["subtitle_at"] + 1) % len(options["subtitles"]); return
+                audio_index = options["audio"][options["audio_at"]]["index"]
+                subtitle_index = options["subtitles"][options["subtitle_at"]]["index"]
+            else:
+                audio_index = subtitle_index = None
             if self.reporter and not self.reporter.finished.is_set():
                 self.status = "Saving previous playback..."
                 return
@@ -341,13 +381,15 @@ class LibraryUI:
                 self.direction = (0, 0)
                 pygame.event.clear()
             self.start("Preparing video...", lambda: self.prepare_playback(
-                self.config, self.api.token, self.api.user_id, item), ready)
+                self.config, self.api.token, self.api.user_id, item, audio_index, subtitle_index), ready)
 
     def back(self):
         if self.pending:
             self.jobs.cancel(self.pending)
             self.pending = None
             self.loading = ""
+        elif self.pages and self.pages[-1].get("options"):
+            self.pages[-1]["options"] = None
         elif self.pages:
             self.pages.pop()
             if not self.pages and self.return_home_refresh and not self.reporter:
@@ -367,7 +409,8 @@ class LibraryUI:
             if page["paging"]:
                 self.renderer.spinner(606, 418, 7)
         else:
-            self.renderer.detail(self.pages[-1]["item"], self.artwork, self.status)
+            page = self.pages[-1]
+            self.renderer.detail(page["item"], self.artwork, self.status, page.get("options"))
         if self.pending:
             self.renderer.loading(self.loading)
             self.renderer.footer("Loading...     B  Cancel     Start  Exit")
@@ -399,7 +442,9 @@ class LibraryUI:
                         self.activate()
                         break
                     elif event.button == 6:
-                        if self.pages and self.pages[-1]["kind"] == "list":
+                        if self.pages and self.pages[-1]["kind"] == "detail":
+                            self.pages[-1]["options"] = self.options_for(self.pages[-1]["item"])
+                        elif self.pages and self.pages[-1]["kind"] == "list":
                             self.more(self.pages[-1])
                         else:
                             self.refresh()

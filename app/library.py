@@ -105,7 +105,7 @@ class LibraryAPI:
         return items, total, more
 
     def detail(self, item):
-        return self.get("/Users/" + self.user_id + "/Items/" + item["Id"])
+        return self.get("/Users/" + self.user_id + "/Items/" + item["Id"], Fields="MediaSources,MediaStreams,Overview,RunTimeTicks,UserData")
 
 
 def image_candidates(item, landscape):

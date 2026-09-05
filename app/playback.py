@@ -128,8 +128,9 @@ class InputDecoder:
     EVENT = struct.Struct("@llHHi")
     # Verified against KNULLI's es_input.cfg for Anbernic RG35XX-H Controller.
     BUTTONS = {304: "pause", 305: "stop", 310: "stop", 311: "stop",
-               312: "stop", 308: "seek:-30", 309: "seek:30",
-               314: "seek:-60", 315: "seek:60", 307: "osd"}
+               312: "stop", 306: "audio", 307: "subtitles",
+               308: "seek:-30", 309: "seek:30", 314: "seek:-60",
+               315: "seek:60"}
 
     def __init__(self):
         self.buffer = bytearray()
@@ -293,7 +294,12 @@ class PlaybackSession:
                             raise RuntimeError("Player controls did not connect")
                         time.sleep(0.02)
                         continue
-                    self.ipc.command("show-text", "A: Pause   B / Start: Back\nLeft/Right: 10s   L/R: 30s", 5000)
+                    self.ipc.command(
+                        "show-text",
+                        "A: Pause   B / Start: Back\n"
+                        "Left/Right: 10s   L/R: 30s\n"
+                        "X: Audio track   Y: Subtitles",
+                        5000)
                 self._receive()
                 if self.ipc.eof:
                     break
@@ -306,8 +312,14 @@ class PlaybackSession:
                     elif action == "pause":
                         self.ipc.command("cycle", "pause")
                         self.ipc.command("show-progress")
-                    elif action == "osd":
-                        self.ipc.command("show-progress")
+                    elif action == "audio":
+                        # mpv's audio property cycles every embedded audio stream.
+                        self.ipc.command("cycle", "audio")
+                        self.ipc.command("show-text", "Audio track changed", 1800)
+                    elif action == "subtitles":
+                        # "sub" includes Off, then each embedded subtitle stream.
+                        self.ipc.command("cycle", "sub")
+                        self.ipc.command("show-text", "Subtitle track changed", 1800)
                 if self.ipc.loaded or "time-pos" in self.ipc.properties:
                     if not self.started:
                         self.reporter.submit("started", self.position_ticks, self.paused)

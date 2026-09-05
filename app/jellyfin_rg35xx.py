@@ -4,7 +4,7 @@ import pygame
 import requests
 from playback import ControllerInput, PlaybackReporter, PlaybackSession
 
-BUILD = "1.4"
+BUILD = "1.5"
 CONFIG = os.environ.get("JELLYFIN_CONFIG", "/userdata/roms/ports/jellyfinrg35xx/config.json")
 CA_BUNDLE = "/etc/ssl/certs/ca-certificates.crt"
 LOG = logging.getLogger("jellyfin")
@@ -101,7 +101,7 @@ def report_playing(config, token, user_id, item, session_id, position_ticks=0, e
         LOG.info("Playback %s HTTP %d position_ticks=%d", event, response.status_code, int(position_ticks))
         response.raise_for_status()
 
-def prepare_playback(config, token, user_id, item):
+def prepare_playback(config, token, user_id, item, audio_index=None, subtitle_index=None):
     item_id = item.get("Id")
     if not item_id: raise ValueError("Missing media ID")
     session_id = str(uuid.uuid4())
@@ -131,7 +131,9 @@ def prepare_playback(config, token, user_id, item):
                    + "&MediaSourceId=" + str(source_id) + "&DeviceId=rg35xxh&PlaySessionId=" + session_id
                    + "&VideoCodec=h264&AudioCodec=aac&MaxWidth=" + str(width) + "&MaxHeight=" + str(height)
                    + "&VideoBitrate=" + str(video_bitrate) + "&AudioBitrate=128000&MaxStreamingBitrate=" + str(max_bitrate)
-                   + "&TranscodingMaxAudioChannels=2&SegmentContainer=ts")
+                   + "&TranscodingMaxAudioChannels=2&SegmentContainer=ts"
+                   + ("&AudioStreamIndex=" + str(audio_index) if audio_index is not None else "")
+                   + ("&SubtitleStreamIndex=" + str(subtitle_index) if subtitle_index is not None else ""))
             probe = requests.get(url, headers={"X-Emby-Token": token}, timeout=4, verify=CA_BUNDLE, stream=True)
             invalid = probe.status_code < 200 or probe.status_code >= 300 or "application/json" in probe.headers.get("content-type", "")
             probe.close()

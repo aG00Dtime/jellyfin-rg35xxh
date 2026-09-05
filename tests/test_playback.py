@@ -73,6 +73,10 @@ class InputTests(unittest.TestCase):
         self.assertEqual(InputDecoder().feed(raw),
                          ["seek:-10", "seek:10", "seek:-30", "seek:30", "pause"])
 
+    def test_x_and_y_cycle_audio_and_subtitle_tracks(self):
+        raw = self.event(1, 306, 1) + self.event(1, 307, 1)
+        self.assertEqual(InputDecoder().feed(raw), ["audio", "subtitles"])
+
     def test_volume_release_and_repeat_are_ignored(self):
         decoder = InputDecoder()
         raw = b"".join(self.event(*event) for event in

@@ -9,6 +9,14 @@ source "$controlfolder/control.txt"
 get_controls
 GAMEDIR="/$directory/ports/jellyfinrg35xx"
 CONFDIR="$GAMEDIR/conf"
+# Earlier development builds placed a second launcher and game metadata inside
+# the app directory. KNULLI then lists the port twice. The root launcher is the
+# supported entry point, so clean up only those obsolete duplicate files.
+rm -f "$GAMEDIR/JellyfinRG35XX.sh" "$GAMEDIR/gameinfo.xml" "$GAMEDIR/port.json" "$GAMEDIR/README.md"
+# Python bytecode from a manually copied update can have the same timestamp as
+# its source. Regenerate this tiny cache each launch so KNULLI always uses the
+# current app files.
+rm -rf "$GAMEDIR/__pycache__"
 mkdir -p "$CONFDIR"
 # A second launch otherwise invalidates the first login and competes for video.
 exec 9>"$GAMEDIR/.launcher.lock"
