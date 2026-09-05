@@ -263,7 +263,7 @@ class Renderer:
         else:
             self.text("This media type is not playable yet", 185, 370, 429, self.small, MUTED)
         self.text(status, 18, 414, 600, self.small, MUTED)
-        self.footer("A  Play / Resume     X  Watched     B  Back     Start  Exit")
+        self.footer("A  Play / Resume     X  Play options     Y  Watched     B  Back     Start  Exit")
         if options:
             pygame.draw.rect(self.screen, (30, 32, 41), (174, 268, 452, 150), border_radius=8)
             self.text("Play options", 192, 282, 400, self.heading)
@@ -714,7 +714,9 @@ class LibraryUI:
                         break
                     elif event.button == 6:
                         if self.pages and self.pages[-1]["kind"] == "detail":
-                            self.toggle_played(self.pages[-1]["item"])
+                            page = self.pages[-1]
+                            page["options"] = page.get("track_options") or self.options_for(page["item"])
+                            page["track_options"] = page["options"]
                         elif self.pages and self.pages[-1]["kind"] == "list":
                             page = self.pages[-1]
                             if page["items"]:
@@ -722,7 +724,10 @@ class LibraryUI:
                         elif self.api:
                             self.refresh()
                     elif event.button in (5, 7):
-                        self.begin_search()
+                        if self.pages and self.pages[-1]["kind"] == "detail":
+                            self.toggle_played(self.pages[-1]["item"])
+                        else:
+                            self.begin_search()
                 elif event.type == pygame.KEYDOWN:
                     if event.key == pygame.K_ESCAPE:
                         self.running = False
