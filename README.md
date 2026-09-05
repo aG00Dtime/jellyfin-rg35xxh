@@ -4,15 +4,13 @@ Watch your Jellyfin library on an Anbernic RG35XX H running KNULLI. This is an u
 
 It has a Jellyfin-style home screen with **My Media**, **Next Up**, **Continue Watching**, and **Recently Added** shelves. Folder artwork and media thumbnails load from your own server.
 
-![Jellyfin RG35XX H](app/assets/jellyfin-icon.png)
-
 ## See it in action
 
-This is the app running on an RG35XX H, with artwork loaded from Jellyfin.
+This frame comes directly from the recorded RG35XX H demo, with artwork loaded from Jellyfin. Select it to play the full video in your browser.
 
-![Jellyfin RG35XX H home screen](docs/screenshots/home.png)
+[![Jellyfin RG35XX H home screen — select to play the demo](docs/screenshots/navigation-demo-preview.jpg)](https://github.com/aG00Dtime/jellyfin-rg35xxh/raw/refs/heads/master/docs/screenshots/navigation-demo.mp4)
 
-[Watch a controller navigation demo (MP4, 6 MB)](docs/screenshots/navigation-demo.mp4)
+[Watch the controller navigation demo (MP4, 6 MB)](https://github.com/aG00Dtime/jellyfin-rg35xxh/raw/refs/heads/master/docs/screenshots/navigation-demo.mp4)
 
 ## What you need
 
