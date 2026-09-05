@@ -4,7 +4,7 @@ param(
 )
 
 $ErrorActionPreference = "Stop"
-$stage = Join-Path $env:TEMP ("jellyfin-rg35xx-port-" + [guid]::NewGuid().ToString('N'))
+$stage = Join-Path ([System.IO.Path]::GetTempPath()) ("jellyfin-rg35xx-port-" + [guid]::NewGuid().ToString('N'))
 New-Item -ItemType Directory -Path (Join-Path $stage "jellyfinrg35xx") -Force | Out-Null
 Copy-Item -LiteralPath "port/JellyfinRG35XX.sh" -Destination (Join-Path $stage "Jellyfin RG35XX.sh")
 Copy-Item -LiteralPath "port/port.json" -Destination (Join-Path $stage "jellyfinrg35xx/port.json")
