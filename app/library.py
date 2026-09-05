@@ -117,7 +117,7 @@ class LibraryAPI:
         return result.get("Items", []), result.get("TotalRecordCount", 0)
 
     def detail(self, item):
-        return self.get("/Users/" + self.user_id + "/Items/" + item["Id"], Fields="MediaSources,MediaStreams,Overview,RunTimeTicks,UserData")
+        return self.get("/Users/" + self.user_id + "/Items/" + item["Id"], Fields="SeriesId,SeasonId,IndexNumber,ParentIndexNumber,MediaSources,MediaStreams,Overview,RunTimeTicks,UserData")
 
     def set_played(self, item, played):
         path = "/Users/" + self.user_id + "/PlayedItems/" + item["Id"]
@@ -130,15 +130,21 @@ class LibraryAPI:
         return item
 
     def next_episode(self, item):
-        series_id = item.get("SeriesId") or item.get("SeriesId")
+        series_id = item.get("SeriesId")
         season_id = item.get("SeasonId")
         index = item.get("IndexNumber")
-        if not series_id or not season_id or index is None:
+        if not series_id or index is None:
             return None
-        result = self.get("/Shows/" + series_id + "/Episodes", UserId=self.user_id,
-                          SeasonId=season_id, Fields=FIELDS, Limit=200,
-                          SortBy="IndexNumber", SortOrder="Ascending")
+        params = dict(UserId=self.user_id, Fields=FIELDS + ",SeriesId,SeasonId,IndexNumber,ParentIndexNumber",
+                      Limit=200, SortBy="ParentIndexNumber,IndexNumber", SortOrder="Ascending")
+        if season_id:
+            params["SeasonId"] = season_id
+        result = self.get("/Shows/" + series_id + "/Episodes", **params)
         episodes = result.get("Items", [])
+        current = next((pos for pos, episode in enumerate(episodes)
+                        if episode.get("Id") == item.get("Id")), None)
+        if current is not None and current + 1 < len(episodes):
+            return episodes[current + 1]
         return next((episode for episode in episodes
                      if episode.get("IndexNumber") == index + 1), None)
 
@@ -164,6 +170,7 @@ def image_candidates(item, landscape):
 
 class Artwork:
     """Download/cache bytes on workers, decode/scale surfaces only on the UI thread."""
+    PROFILE = "thumb-v8-120q75"
     def __init__(self, api, cache):
         self.api, self.cache = api, cache
         self.jobs = Jobs(2)
@@ -174,7 +181,7 @@ class Artwork:
         os.makedirs(cache, exist_ok=True)
 
     def key(self, item, landscape):
-        value = repr((self.api.server, image_candidates(item, landscape)))
+        value = repr((self.PROFILE, self.api.server, image_candidates(item, landscape)))
         return hashlib.sha256(value.encode()).hexdigest()
 
     def _download(self, item, landscape, key):
@@ -183,7 +190,9 @@ class Artwork:
             with open(path, "rb") as source:
                 return source.read()
         for identity, kind, tag in image_candidates(item, landscape):
-            params = {"maxWidth": 300, "quality": 85}
+            # The RG35XX display is only 640x480.  Keep network images tiny;
+            # pygame scales them to the card size after they arrive.
+            params = {"maxWidth": 120 if landscape else 96, "quality": 75}
             if tag:
                 params["tag"] = tag
             with requests.get(self.api.server + "/Items/" + identity + "/Images/" + kind,
@@ -218,7 +227,7 @@ class Artwork:
                     surface = None
                 self.images[key] = surface
                 self.revision += 1
-                while len(self.images) > 96:
+            while len(self.images) > 32:
                     self.images.popitem(last=False)
             self.jobs.submit(lambda: self._download(item, landscape, key), complete)
         source = self.images.get(key)
@@ -231,10 +240,15 @@ class Artwork:
             factor = min(size[0] / width, size[1] / height)
             scaled = pygame.transform.smoothscale(source, (max(1, round(width * factor)), max(1, round(height * factor))))
             self.scaled[scale_key] = scaled
-            while len(self.scaled) > 64:
+            while len(self.scaled) > 24:
                 self.scaled.popitem(last=False)
         self.scaled.move_to_end(scale_key)
         return self.scaled[scale_key], False
+
+    def prefetch(self, items, landscape=True):
+        """Start visible shelf downloads before the user scrolls to them."""
+        for item in items[:2]:
+            self.get(item, (188, 113) if landscape else (140, 220), landscape)
 
 
 class Rows:

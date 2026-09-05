@@ -286,6 +286,16 @@ class Renderer:
         self.spinner(320, 210, 13)
         self.text(label, 136, 244, 368, self.font, TEXT, center=True)
 
+    def next_episode_splash(self, item):
+        self.header(False)
+        self.screen.blit(pygame.transform.smoothscale(self.logo, (70, 70)), (285, 105))
+        self.text("Episode complete", 18, 205, 604, self.heading, center=True)
+        self.text("Playing next episode", 18, 244, 604, self.font, ACCENT, center=True)
+        self.text(item.get("SeriesName") or "Next episode", 18, 285, 604, self.font, TEXT, center=True)
+        self.text("S%s E%s · %s" % (item.get("ParentIndexNumber", "?"), item.get("IndexNumber", "?"), item.get("Name", "")), 18, 315, 604, self.small, MUTED, center=True)
+        self.spinner(320, 365, 12)
+        self.footer("Preparing next episode...")
+
 
 class LibraryUI:
     def __init__(self, config, error, build, authenticate, play_item, prepare_playback, headers, verify, save_config, normalize_server_url=None):
@@ -431,6 +441,8 @@ class LibraryUI:
             row["loading"] = False
             row["loaded"] = True
             row["items"] = value or []
+            if row["items"] and self.artwork:
+                self.artwork.prefetch(row["items"])
             if error:
                 row["error"] = "Could not load this row. X to refresh."
         self.jobs.submit(row["fetch"], done)
@@ -463,14 +475,21 @@ class LibraryUI:
     def play_episode_chain(self, item, prepared=None):
         self.screen, self.status, self.reporter = self.play_item(
             self.config, self.api.token, self.api.user_id, item, prepared=prepared)
+        self.renderer.screen = self.screen
+        final_item = item
         if item.get("_PlaybackCompleted") and item.get("Type") == "Episode":
             next_item = self.api.next_episode(item)
             if next_item:
                 self.status = "Playing next episode..."
+                self.renderer.next_episode_splash(next_item)
+                pygame.display.flip()
                 next_prepared = self.prepare_playback(
                     self.config, self.api.token, self.api.user_id, next_item)
-                self.play_episode_chain(next_item, next_prepared)
+                final_item = self.play_episode_chain(next_item, next_prepared)
+        if self.pages and self.pages[-1].get("kind") == "detail":
+            self.pages[-1]["item"] = final_item
         item.pop("_PlaybackCompleted", None)
+        return final_item
 
     def options_for(self, item):
         streams = ((item.get("MediaSources") or [{}])[0].get("MediaStreams")
