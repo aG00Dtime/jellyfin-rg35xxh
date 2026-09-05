@@ -10,16 +10,22 @@ get_controls
 GAMEDIR="/$directory/ports/jellyfinrg35xx"
 CONFDIR="$GAMEDIR/conf"
 GAMELIST="/$directory/ports/gamelist.xml"
+PM_IMAGES="$XDG_DATA_HOME/PortMaster/config/images_pm"
 # Existing installs keep their old game-list entry when updated. Add the cover
 # reference once without replacing play time or other user-maintained metadata.
 if [ -f "$GAMELIST" ] && ! sed -n '/<path>\.\/Jellyfin RG35XX\.sh<\/path>/,/<\/game>/p' "$GAMELIST" | grep -q '<image>'; then
   sed -i '/<path>\.\/Jellyfin RG35XX\.sh<\/path>/,/<\/game>/ { /<genre>Media<\/genre>/a\            <image>./jellyfinrg35xx/cover.png</image>
 }' "$GAMELIST"
 fi
-# Earlier development builds placed a second launcher and game metadata inside
-# the app directory. KNULLI then lists the port twice. The root launcher is the
-# supported entry point, so clean up only those obsolete duplicate files.
-rm -f "$GAMEDIR/JellyfinRG35XX.sh" "$GAMEDIR/gameinfo.xml" "$GAMEDIR/port.json" "$GAMEDIR/README.md"
+# Repair the temporary JPEG diagnostic cover used by development builds.
+sed -i '/<path>\.\/Jellyfin RG35XX\.sh<\/path>/,/<\/game>/ s#\./jellyfinrg35xx/cover\.jpg#./jellyfinrg35xx/cover.png#' "$GAMELIST"
+# The manifest and game info belong in the app folder, just like PortMaster's
+# own ports. Only the old nested launcher created a second Ports entry.
+rm -f "$GAMEDIR/JellyfinRG35XX.sh"
+if [ -f "$GAMEDIR/cover.png" ]; then
+  mkdir -p "$PM_IMAGES"
+  cp -f "$GAMEDIR/cover.png" "$PM_IMAGES/jellyfinrg35xx.screenshot.png"
+fi
 # Python bytecode from a manually copied update can have the same timestamp as
 # its source. Regenerate this tiny cache each launch so KNULLI always uses the
 # current app files.

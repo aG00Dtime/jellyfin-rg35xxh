@@ -37,8 +37,7 @@ For a later update, copy the new file and folder into the same place and allow y
 
 | Where you are | Controls |
 | --- | --- |
-| Home and folders | D-pad moves, **A** opens, **Y** searches (all libraries from Home or the current folder), **B** goes back, **Start** exits |
-| Search | D-pad left/right chooses a character, **A** adds it, **X** deletes it, up/down selects a result, **Y** opens that result |
+| Home and folders | D-pad moves, **A** opens, **B** goes back, **Start** exits |
 | Video | **A** pauses or resumes; **B**, **Start**, or **Select** returns to the app |
 | Video seeking | D-pad left/right skips 10 seconds; L1/R1 skips 30 seconds; L2/R2 skips 60 seconds |
 | Audio and subtitles | **X** cycles audio tracks; **Y** cycles subtitle tracks (including Off) |

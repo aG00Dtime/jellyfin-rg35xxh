@@ -4,7 +4,7 @@ import pygame
 import requests
 from playback import ControllerInput, PlaybackReporter, PlaybackSession
 
-BUILD = "1.8"
+BUILD = "1.9"
 CONFIG = os.environ.get("JELLYFIN_CONFIG", "/userdata/roms/ports/jellyfinrg35xx/config.json")
 CA_BUNDLE = "/etc/ssl/certs/ca-certificates.crt"
 LOG = logging.getLogger("jellyfin")

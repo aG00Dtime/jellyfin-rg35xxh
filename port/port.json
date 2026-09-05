@@ -1,5 +1,5 @@
 {
-  "version": 2,
+  "version": 4,
   "name": "jellyfinrg35xx.zip",
   "items": ["Jellyfin RG35XX.sh", "jellyfinrg35xx"],
   "items_opt": null,
@@ -9,7 +9,12 @@
     "inst": "Ready to run.",
     "genres": ["media"],
     "porter": ["Community"],
-    "image": {},
+    "image": {
+      "screenshot": "cover.png",
+      "covers": [],
+      "thumbnail": null,
+      "video": null
+    },
     "rtr": true,
     "runtime": null,
     "reqs": [],
