@@ -20,7 +20,9 @@ Copy-Item -LiteralPath "config/config.example.json" -Destination (Join-Path $sta
 Compress-Archive -Path (Join-Path $stage "*") -DestinationPath $Output -Force
 $archive = [System.IO.Compression.ZipFile]::OpenRead((Resolve-Path -LiteralPath $Output))
 try {
-  $entries = @($archive.Entries | ForEach-Object { $_.FullName.TrimEnd('/') })
+  # Compress-Archive writes backslashes on Windows; ZIP paths are logically
+  # slash-separated, so normalise before validating the portable layout.
+  $entries = @($archive.Entries | ForEach-Object { $_.FullName.Replace('\', '/').TrimEnd('/') })
 } finally {
   $archive.Dispose()
 }

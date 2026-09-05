@@ -1,13 +1,20 @@
 #!/usr/bin/python3
-import io, json, logging, math, os, time, uuid
+import io, json, logging, math, os, subprocess, tempfile, time, uuid
 import pygame
 import requests
 from playback import ControllerInput, PlaybackReporter, PlaybackSession
 
-BUILD = "1.9.2"
+BUILD = "2.0-keyboard"
 CONFIG = os.environ.get("JELLYFIN_CONFIG", "/userdata/roms/ports/jellyfinrg35xx/config.json")
+CONFIG_KEY = CONFIG + ".key"
 CA_BUNDLE = "/etc/ssl/certs/ca-certificates.crt"
 LOG = logging.getLogger("jellyfin")
+
+def normalize_server_url(value):
+    value = str(value or "").strip().rstrip("/")
+    if value and not value.lower().startswith(("http://", "https://")):
+        value = "https://" + value
+    return value
 
 def auth_headers(token=None):
     headers = {"Content-Type": "application/json", "Accept": "application/json",
@@ -18,12 +25,49 @@ def auth_headers(token=None):
 
 def load_config():
     try:
-        with open(CONFIG, encoding="utf-8") as f: value = json.load(f)
-        for key in ("serverUrl", "username", "password"):
+        with open(CONFIG, "rb") as f: raw = f.read()
+        if raw.startswith(b"Salted__"):
+            with tempfile.NamedTemporaryFile() as decrypted:
+                subprocess.run(["openssl", "enc", "-d", "-aes-256-cbc", "-pbkdf2", "-in", CONFIG,
+                                "-out", decrypted.name, "-pass", "file:" + CONFIG_KEY], check=True,
+                               stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+                decrypted.seek(0)
+                value = json.loads(decrypted.read().decode("utf-8"))
+        else:
+            value = json.loads(raw.decode("utf-8"))
+        for key in ("serverUrl", "username"):
             if not value.get(key): raise ValueError("config needs serverUrl, username, and password")
+        value["serverUrl"] = normalize_server_url(value["serverUrl"])
+        if not raw.startswith(b"Salted__"):
+            save_config(value)
         return value, ""
     except FileNotFoundError: return None, "Missing config.json"
     except Exception as exc: return None, "Config error: " + str(exc)
+
+def save_config(value):
+    """Persist first-run setup encrypted with a device-local AES key."""
+    directory = os.path.dirname(CONFIG)
+    os.makedirs(directory, exist_ok=True)
+    if not os.path.exists(CONFIG_KEY):
+        with open(CONFIG_KEY, "wb") as f:
+            f.write(os.urandom(32))
+        os.chmod(CONFIG_KEY, 0o600)
+    plaintext = CONFIG + ".plain.tmp"
+    encrypted = CONFIG + ".tmp"
+    with open(plaintext, "w", encoding="utf-8") as f:
+        json.dump(value, f, indent=2)
+        f.write("\n")
+    try:
+        subprocess.run(["openssl", "enc", "-aes-256-cbc", "-pbkdf2", "-in", plaintext,
+                        "-out", encrypted, "-pass", "file:" + CONFIG_KEY], check=True,
+                       stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        os.chmod(encrypted, 0o600)
+        os.replace(encrypted, CONFIG)
+    finally:
+        try: os.remove(plaintext)
+        except FileNotFoundError: pass
+        try: os.remove(encrypted)
+        except FileNotFoundError: pass
 
 def draw_jellyfin_mark(surface, x, y, scale=1.0):
     """Dependency-free fin mark that remains crisp on the RG35XX display."""
@@ -204,6 +248,6 @@ def main():
     LOG.info("Jellyfin build %s starting", BUILD)
     from ui import LibraryUI
     config, status = load_config()
-    LibraryUI(config, status, BUILD, authenticate, play_item, prepare_playback, auth_headers, CA_BUNDLE).run()
+    LibraryUI(config, status, BUILD, authenticate, play_item, prepare_playback, auth_headers, CA_BUNDLE, save_config, normalize_server_url).run()
 
 if __name__ == "__main__": main()

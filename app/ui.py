@@ -142,7 +142,84 @@ class Renderer:
             for offset, item in enumerate(items[first:first + 3]):
                 self.card(item, pygame.Rect(18 + offset * 204, y + 31, 188, 144), artwork,
                           index == rows.row and first + offset == col)
-        self.footer("D-pad  Browse rows     A  Open     X  Refresh     Start  Exit")
+        self.footer("D-pad  Browse rows     A  Open     Y  Search     R1  Settings     Start  Exit")
+
+    def keyboard(self, page, loading=False):
+        """Controller keyboard modelled on OD Commander's proven 12-by-4 layout."""
+        self.header(False)
+        parent = page.get("parent")
+        title = page.get("title") or ("Search all libraries" if not parent else "Search in " + parent.get("Name", "folder"))
+        self.text(title, 18, 78, 420, self.heading)
+        query = page.get("query", "")
+        pygame.draw.rect(self.screen, PANEL, (18, 105, 604, 31), border_radius=4)
+        shown = ("•" * len(query)) if page.get("secret") else query
+        self.text(shown or page.get("placeholder", "Enter search text"), 29, 112, 570, self.font, TEXT if query else MUTED)
+        layer_name = "CAPS + SYMBOLS" if page["layer"] else "lowercase"
+        self.text("R1/L1  " + layer_name, 430, 81, 190, self.small, ACCENT, center=True)
+        keys = page["layers"][page["layer"]]
+        width, height, x0, y0 = 48, 42, 32, 146
+        for row_index, row in enumerate(keys):
+            for column, label in enumerate(row):
+                rect = pygame.Rect(x0 + column * width, y0 + row_index * height, width - 2, height - 2)
+                selected = page["focus"] == "keys" and page["key_y"] == row_index and page["key_x"] == column
+                pygame.draw.rect(self.screen, ACCENT if selected else PANEL, rect, border_radius=3)
+                display = "SPACE" if label == " " else ("DEL" if label == "←" else label)
+                self.text(display, rect.x, rect.y + 12, rect.width, self.small, TEXT, center=True)
+        items = page.get("items", [])
+        if loading:
+            self.spinner(606, 345, 7)
+        elif page.get("searched") and not items:
+            self.text("No matches", 18, 326, 604, self.font, MUTED, center=True)
+        elif items:
+            first = max(0, min(page["selection"] - 1, max(0, len(items) - 3)))
+            for offset, item in enumerate(items[first:first + 3]):
+                y = 320 + offset * 28
+                selected = page["focus"] == "results" and first + offset == page["selection"]
+                if selected:
+                    pygame.draw.rect(self.screen, ACCENT, (18, y - 2, 604, 24), border_radius=3)
+                label = item.get("SeriesName") + " · " + item.get("Name", "") if item.get("Type") == "Episode" else item.get("Name", "Untitled")
+                self.text(label, 28, y + 2, 570, self.font, TEXT)
+        if page["kind"] == "input":
+            help_text = "A  Type     X  Space     Y  Delete     Start  Save     B  Cancel"
+        elif page["focus"] == "results":
+            help_text = "D-pad  Choose result     A  Open     B  Keyboard"
+        else:
+            help_text = "A  Type     X  Space     Y  Delete     Start  Search     B  Cancel"
+        self.footer(help_text)
+
+    def setup(self, page):
+        self.header(False)
+        self.text("Connect to Jellyfin", 18, 84, 604, self.heading)
+        self.wrap("Enter your server details once. They stay on this handheld.", 18, 115, 604, 2, self.font)
+        fields = [("Server URL", page["values"].get("serverUrl", "")), ("Username", page["values"].get("username", "")),
+                  ("Password", "•" * len(page["values"].get("password", ""))), ("Quality", page["values"].get("quality", "480p")),
+                  ("Connect", "Save and sign in")]
+        for index, (label, value) in enumerate(fields):
+            y = 175 + index * 45
+            selected = index == page["selection"]
+            pygame.draw.rect(self.screen, ACCENT if selected else PANEL, (18, y, 604, 36), border_radius=5)
+            self.text(label, 31, y + 9, 160, self.font, TEXT)
+            self.text(value or "Not set", 210, y + 9, 392, self.font, TEXT if value else MUTED)
+        self.footer("D-pad  Choose     A  Edit / Connect     Start  Exit")
+
+    def settings(self, page):
+        self.header(False)
+        self.text("Settings", 18, 84, 604, self.heading)
+        values = page["values"]
+        fields = [("Quality", values.get("quality", "480p")), ("Server URL", values.get("serverUrl", "")),
+                  ("Username", values.get("username", "")), ("Password", "Saved"), ("Logout", "Forget saved login"), ("Back", "Return home")]
+        for index, (label, value) in enumerate(fields):
+            y = 125 + index * 45
+            selected = index == page["selection"]
+            pygame.draw.rect(self.screen, ACCENT if selected else PANEL, (18, y, 604, 36), border_radius=5)
+            self.text(label, 31, y + 9, 160, self.font, TEXT)
+            self.text(value or "Not set", 210, y + 9, 392, self.font, TEXT if value else MUTED)
+        self.footer("D-pad  Choose     A  Edit     B  Back     Start  Exit")
+        if page.get("confirm_logout"):
+            pygame.draw.rect(self.screen, (30, 32, 41), (82, 184, 476, 112), border_radius=8)
+            self.text("Log out?", 104, 202, 432, self.heading, center=True)
+            self.text("Server and username will be kept.", 104, 238, 432, self.small, MUTED, center=True)
+            self.text("A  Confirm       B  Cancel", 104, 266, 432, self.small, TEXT, center=True)
 
     def listing(self, page, artwork, loading=False):
         self.header(False)
@@ -165,7 +242,7 @@ class Renderer:
             self.card(item, rect, artwork, first + offset == selected, not portrait)
         if page.get("more"):
             self.text("More titles load as you browse", 18, 411, 580, self.small, MUTED)
-        self.footer("D-pad  Browse     A  Open     B  Back     Start  Exit")
+        self.footer("D-pad  Browse     A  Open     Y  Search     B  Back     Start  Exit")
 
     def detail(self, item, artwork, status, options=None):
         self.header(False)
@@ -211,7 +288,7 @@ class Renderer:
 
 
 class LibraryUI:
-    def __init__(self, config, error, build, authenticate, play_item, prepare_playback, headers, verify):
+    def __init__(self, config, error, build, authenticate, play_item, prepare_playback, headers, verify, save_config, normalize_server_url=None):
         pygame.init()
         self.joysticks = [pygame.joystick.Joystick(i) for i in range(pygame.joystick.get_count())]
         for joystick in self.joysticks:
@@ -220,7 +297,7 @@ class LibraryUI:
         self.renderer = Renderer(self.screen, build)
         self.config, self.authenticate, self.play_item = config, authenticate, play_item
         self.prepare_playback = prepare_playback
-        self.headers, self.verify = headers, verify
+        self.headers, self.verify, self.save_config, self.normalize_server_url = headers, verify, save_config, normalize_server_url or (lambda value: value)
         self.jobs = Jobs()
         self.api = self.artwork = None
         self.rows = Rows([])
@@ -234,8 +311,65 @@ class LibraryUI:
         self.return_home_refresh = False
         self.repeat_at = 0
         self.direction = (0, 0)
-        if config:
+        self.setup_page = None if config else {"kind": "setup", "selection": 0, "values": {"serverUrl": "", "username": "", "password": "", "quality": "480p"}}
+        if config and config.get("password"):
             self.start("Connecting to Jellyfin...", lambda: authenticate(config), self.connected)
+        elif config:
+            self.setup_page = {"kind": "setup", "selection": 2, "values": dict(config)}
+
+    def begin_input(self, key, label, secret=False):
+        values = self.setup_page["values"] if self.setup_page else self.pages[-1]["values"]
+        if not self.setup_page:
+            self.setup_page = {"values": values, "return_settings": True}
+        self.pages.append(dict(kind="input", target=key, title=label, placeholder="Enter " + label.lower(), secret=secret,
+                               query=values.get(key, ""), layer=0, key_x=0, key_y=0, focus="keys",
+                               items=[], searched=False, layers=[[list("1234567890-="), list("qwertyuiop[]"), list("asdfghjkl;'\\"), list("zxcvbnm,./") + [" ", "←"]], [list("!@#$%^&*()_+"), list("QWERTYUIOP{}"), list('ASDFGHJKL:\"|'), list("ZXCVBNM<>?") + [" ", "←"]]]))
+
+    def finish_input(self, page):
+        self.setup_page["values"][page["target"]] = page["query"].strip()
+        self.pages.pop()
+        if self.setup_page.get("return_settings"):
+            self.save_config(self.setup_page["values"])
+            self.config = self.setup_page["values"]
+            self.setup_page = None
+
+    def begin_settings(self):
+        self.pages.append(dict(kind="settings", selection=0, values=dict(self.config)))
+
+    def settings_activate(self):
+        page = self.pages[-1]
+        if page.get("confirm_logout"):
+            self.logout()
+            return
+        if page["selection"] == 0:
+            page["values"]["quality"] = {"480p": "720p", "720p": "1080p", "1080p": "360p", "360p": "480p"}.get(page["values"].get("quality"), "480p")
+        elif page["selection"] == 1:
+            self.begin_input("serverUrl", "Server URL")
+        elif page["selection"] == 2:
+            self.begin_input("username", "Username")
+        elif page["selection"] == 3:
+            self.begin_input("password", "Password", True)
+        elif page["selection"] == 4:
+            page["confirm_logout"] = True
+        else:
+            self.pages.pop()
+        if self.pages and self.pages[-1].get("kind") == "settings":
+            self.save_config(page["values"])
+
+    def setup_activate(self):
+        page = self.setup_page
+        keys = [("serverUrl", "Server URL", False), ("username", "Username", False), ("password", "Password", True)]
+        if page["selection"] < 3:
+            self.begin_input(*keys[page["selection"]]); return
+        if page["selection"] == 3:
+            values = page["values"]
+            values["quality"] = {"480p": "720p", "720p": "360p", "360p": "480p"}.get(values.get("quality"), "480p"); return
+        values = page["values"]
+        if not all(values.get(key) for key in ("serverUrl", "username", "password")):
+            self.status = "Complete server URL, username, and password first."; return
+        values["serverUrl"] = self.normalize_server_url(values["serverUrl"])
+        self.save_config(values); self.config = values; self.setup_page = None
+        self.start("Connecting to Jellyfin...", lambda: self.authenticate(values), self.connected)
 
     def start(self, label, function, done):
         if self.pending:
@@ -273,6 +407,17 @@ class LibraryUI:
                                "fetch": lambda parent=view["Id"]: self.api.latest(parent)})
             self.rows = Rows(values)
         self.start("Loading My Media...", self.api.views, ready)
+
+    def logout(self):
+        self.api = self.artwork = None
+        self.pages = []
+        self.rows = Rows([])
+        values = dict(self.config or {})
+        values["password"] = ""
+        self.save_config(values)
+        self.config = None
+        self.setup_page = {"kind": "setup", "selection": 2, "values": values}
+        self.status = "Logged out. Enter your details to connect again."
 
     def load_row(self, index):
         row = self.rows.values[index]
@@ -332,13 +477,77 @@ class LibraryUI:
             page["total"], page["more"] = total, bool(more and items)
         self.jobs.submit(lambda: self.api.children(page["parent"], page["next_start"]), done)
 
+    def begin_search(self):
+        parent = self.pages[-1].get("parent") if self.pages and self.pages[-1]["kind"] == "list" else None
+        self.pages.append(dict(kind="search", parent=parent, query="", layer=0, key_x=0, key_y=0,
+                               focus="keys", selection=0, items=[], searched=False,
+                               layers=[
+                                   [list("1234567890-="), list("qwertyuiop[]"), list("asdfghjkl;'\\"),
+                                    list("zxcvbnm,./") + [" ", "←"]],
+                                   [list("!@#$%^&*()_+"), list("QWERTYUIOP{}"), list('ASDFGHJKL:\"|'),
+                                    list("ZXCVBNM<>?") + [" ", "←"]],
+                               ]))
+
+    def search_now(self, page):
+        term = page["query"].strip()
+        if not term:
+            self.status = "Type something to search"
+            return
+        page["searched"] = True
+        def done(result):
+            page["items"], _ = result
+            page["selection"] = 0
+            page["focus"] = "results" if page["items"] else "keys"
+        self.start("Searching Jellyfin...", lambda: self.api.search(term, page.get("parent")), done)
+
+    def keyboard_button(self, button):
+        page = self.pages[-1]
+        if button == 8:
+            page["layer"] = (page["layer"] + 1) % len(page["layers"])
+            return True
+        if button == 9 and page["kind"] == "input":
+            self.finish_input(page)
+            return True
+        if button in (5, 7):  # Y: KNULLI exposes this as either index by input profile.
+            if page["focus"] == "keys":
+                page["query"] = page["query"][:-1]
+            return True
+        if button == 6:  # X: space, matching OD Commander.
+            if page["focus"] == "keys":
+                page["query"] += " "
+            return True
+        if button in (10, 11):  # Start / Select: confirm the search.
+            self.finish_input(page) if page["kind"] == "input" else self.search_now(page)
+            return True
+        return False
+
     def move(self, x, y):
-        if self.pending or not self.api:
+        if self.pending:
+            return
+        if not self.api and self.setup_page and not self.pages:
+            if y: self.setup_page["selection"] = max(0, min(4, self.setup_page["selection"] - y))
             return
         if not self.pages:
             self.rows.move(x, y)
             return
         page = self.pages[-1]
+        if page["kind"] in ("search", "input"):
+            if page["focus"] == "results":
+                if x:
+                    page["selection"] = max(0, min(len(page["items"]) - 1, page["selection"] + x))
+                if y:
+                    page["selection"] = max(0, min(len(page["items"]) - 1, page["selection"] - y))
+                return
+            rows = page["layers"][page["layer"]]
+            if x:
+                page["key_x"] = (page["key_x"] + x) % len(rows[page["key_y"]])
+            if y:
+                page["key_y"] = (page["key_y"] - y) % len(rows)
+                page["key_x"] = min(page["key_x"], len(rows[page["key_y"]]) - 1)
+            return
+        if page["kind"] == "settings":
+            if y: page["selection"] = max(0, min(5, page["selection"] - y))
+            return
         if page["kind"] == "detail" and page.get("options"):
             options = page["options"]
             if y: options["row"] = max(0, min(2, options["row"] - y))
@@ -355,10 +564,22 @@ class LibraryUI:
             self.more(page)
 
     def activate(self):
-        if self.pending or not self.api:
+        if self.pending:
             return
+        if not self.api and self.setup_page and not self.pages:
+            self.setup_activate(); return
+        if self.pages and self.pages[-1]["kind"] == "settings":
+            self.settings_activate(); return
         if not self.pages:
             self.open_item(self.rows.selected(), self.rows.row == 0)
+        elif self.pages[-1]["kind"] in ("search", "input"):
+            page = self.pages[-1]
+            if page["focus"] == "results":
+                if page["items"]:
+                    self.open_item(page["items"][page["selection"]])
+                return
+            key = page["layers"][page["layer"]][page["key_y"]][page["key_x"]]
+            page["query"] = page["query"][:-1] if key == "←" else page["query"] + key
         elif self.pages[-1]["kind"] == "list":
             page = self.pages[-1]
             if page["items"]:
@@ -398,11 +619,17 @@ class LibraryUI:
             self.jobs.cancel(self.pending)
             self.pending = None
             self.loading = ""
+        elif self.pages and self.pages[-1].get("confirm_logout"):
+            self.pages[-1]["confirm_logout"] = False
         elif self.pages and self.pages[-1].get("options"):
             # Keep the selected streams when returning to the details page.
             self.pages[-1]["track_options"] = self.pages[-1]["options"]
             self.pages[-1]["options"] = None
+        elif self.pages and self.pages[-1]["kind"] == "search" and self.pages[-1]["focus"] == "results":
+            self.pages[-1]["focus"] = "keys"
         elif self.pages:
+            if self.pages[-1]["kind"] == "input" and self.setup_page and self.setup_page.get("return_settings"):
+                self.setup_page = None
             self.pages.pop()
             if not self.pages and self.return_home_refresh and not self.reporter:
                 self.return_home_refresh = False
@@ -410,11 +637,19 @@ class LibraryUI:
 
     def draw(self):
         if not self.api:
-            self.renderer.header()
-            self.renderer.wrap(self.status or "Connect to your Jellyfin library", 82, 205, 476, 4, self.renderer.font)
-            self.renderer.footer("X  Retry     Start  Exit")
+            if self.pages and self.pages[-1]["kind"] == "input":
+                self.renderer.keyboard(self.pages[-1], bool(self.pending))
+            elif self.setup_page:
+                self.renderer.setup(self.setup_page)
+            else:
+                self.renderer.header(); self.renderer.wrap(self.status or "Connect to your Jellyfin library", 82, 205, 476, 4, self.renderer.font); self.renderer.footer("X  Retry     Start  Exit")
         elif not self.pages:
             self.renderer.home(self.rows, self.artwork, self.load_row)
+        elif self.pages[-1]["kind"] in ("search", "input"):
+            page = self.pages[-1]
+            self.renderer.keyboard(page, bool(self.pending))
+        elif self.pages[-1]["kind"] == "settings":
+            self.renderer.settings(self.pages[-1])
         elif self.pages[-1]["kind"] == "list":
             page = self.pages[-1]
             self.renderer.listing(page, self.artwork, bool(self.pending))
@@ -446,7 +681,11 @@ class LibraryUI:
                     self.move(*self.direction)
                     self.repeat_at = time.monotonic() + 0.35
                 elif event.type == pygame.JOYBUTTONDOWN:
-                    if event.button in (9, 10, 11):
+                    if self.pages and self.pages[-1]["kind"] in ("search", "input") and self.keyboard_button(event.button):
+                        continue
+                    if event.button == 8 and not self.pages and self.api:
+                        self.begin_settings()
+                    elif event.button in (9, 10, 11):
                         self.running = False
                     elif event.button == 4:
                         self.back()
@@ -460,8 +699,10 @@ class LibraryUI:
                             page["track_options"] = page["options"]
                         elif self.pages and self.pages[-1]["kind"] == "list":
                             self.more(self.pages[-1])
-                        else:
+                        elif self.api:
                             self.refresh()
+                    elif event.button in (5, 7):
+                        self.begin_search()
                 elif event.type == pygame.KEYDOWN:
                     if event.key == pygame.K_ESCAPE:
                         self.running = False
@@ -470,6 +711,12 @@ class LibraryUI:
                         break
                     elif event.key == pygame.K_BACKSPACE:
                         self.back()
+                    elif event.key in (pygame.K_LSHIFT, pygame.K_RSHIFT):
+                        if self.pages and self.pages[-1]["kind"] == "search":
+                            page = self.pages[-1]
+                            page["layer"] = (page["layer"] + 1) % len(page["layers"])
+                    elif event.key == pygame.K_y and not self.pages:
+                        self.begin_search()
                     elif event.key in (pygame.K_LEFT, pygame.K_RIGHT, pygame.K_UP, pygame.K_DOWN):
                         self.move(*{pygame.K_LEFT: (-1, 0), pygame.K_RIGHT: (1, 0), pygame.K_UP: (0, 1), pygame.K_DOWN: (0, -1)}[event.key])
             if self.direction != (0, 0) and time.monotonic() >= self.repeat_at:
