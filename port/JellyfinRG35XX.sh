@@ -9,6 +9,13 @@ source "$controlfolder/control.txt"
 get_controls
 GAMEDIR="/$directory/ports/jellyfinrg35xx"
 CONFDIR="$GAMEDIR/conf"
+GAMELIST="/$directory/ports/gamelist.xml"
+# Existing installs keep their old game-list entry when updated. Add the cover
+# reference once without replacing play time or other user-maintained metadata.
+if [ -f "$GAMELIST" ] && ! sed -n '/<path>\.\/Jellyfin RG35XX\.sh<\/path>/,/<\/game>/p' "$GAMELIST" | grep -q '<image>'; then
+  sed -i '/<path>\.\/Jellyfin RG35XX\.sh<\/path>/,/<\/game>/ { /<genre>Media<\/genre>/a\            <image>./jellyfinrg35xx/cover.png</image>
+}' "$GAMELIST"
+fi
 # Earlier development builds placed a second launcher and game metadata inside
 # the app directory. KNULLI then lists the port twice. The root launcher is the
 # supported entry point, so clean up only those obsolete duplicate files.
@@ -26,7 +33,14 @@ cd "$GAMEDIR" || exit 1
 export XDG_CONFIG_HOME="$CONFDIR"
 export XDG_DATA_HOME="$CONFDIR"
 export SDL_GAMECONTROLLERCONFIG="$sdl_controllerconfig"
+BATTSAVER_PAUSE="/var/run/battery-saver/jellyfinrg35xx.pause"
+mkdir -p "${BATTSAVER_PAUSE%/*}"
+: > "$BATTSAVER_PAUSE"
+cleanup() {
+  rm -f "$BATTSAVER_PAUSE"
+  pm_finish
+}
+trap cleanup EXIT
 $GPTOKEYB "jellyfin_rg35xx.py" &
 pm_platform_helper "$GAMEDIR/jellyfin_rg35xx.py"
 python3 ./jellyfin_rg35xx.py
-pm_finish

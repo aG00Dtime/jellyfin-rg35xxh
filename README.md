@@ -45,6 +45,8 @@ For a later update, copy the new file and folder into the same place and allow y
 
 The app reports playback to Jellyfin while you watch and when you stop, so **Continue Watching** and resume position stay in sync.
 
+Jellyfin temporarily pauses KNULLI's automatic idle sleep while the app is open, then restores it when you exit.
+
 ## Early-release note
 
 This is a community project and it is still evolving. It has been tested on an RG35XX H running KNULLI Scarab, but some media formats, server configurations, artwork, or controller situations may still reveal bugs. If something behaves oddly, restart the app first and then [open an issue](https://github.com/aG00Dtime/jellyfin-rg35xxh/issues) with the Jellyfin version, KNULLI version, and a short description of what happened. Never include your server address, username, password, or access token.

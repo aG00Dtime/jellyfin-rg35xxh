@@ -18,3 +18,5 @@ Keep `config.json` private. Updates do not include or replace it.
 - Video seeking: D-pad left/right skips 10 seconds; L1/R1 skips 30 seconds; L2/R2 skips 60 seconds.
 - Audio and subtitles: **X** cycles audio tracks; **Y** cycles subtitle tracks, including Off.
 - Volume buttons remain controlled by KNULLI.
+
+Automatic KNULLI idle sleep is paused while Jellyfin is open and returns to normal when you exit.
