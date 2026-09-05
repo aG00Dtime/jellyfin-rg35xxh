@@ -1,0 +1,29 @@
+name: Build release
+
+on:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    name: Build and publish release ZIP
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out the tagged source
+        uses: actions/checkout@v4
+
+      - name: Package the PortMaster install
+        shell: pwsh
+        run: ./package.ps1
+
+      - name: Create release and upload ZIP
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: >-
+          gh release create "${{ github.ref_name }}" jellyfinrg35xx.zip
+          --title "Jellyfin RG35XX H ${{ github.ref_name }}"
+          --generate-notes
