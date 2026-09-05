@@ -79,7 +79,8 @@ class LibraryAPI:
 
     def latest(self, parent):
         result = self.get("/Users/" + self.user_id + "/Items/Latest", ParentId=parent,
-                          Limit=16, Fields=FIELDS, EnableImageTypes="Primary,Thumb,Backdrop")
+                          Limit=24, IncludeItemTypes="Movie,Episode", Fields=FIELDS,
+                          EnableImageTypes="Primary,Thumb,Backdrop")
         return result if isinstance(result, list) else result.get("Items", [])
 
     def children(self, item, start=0):

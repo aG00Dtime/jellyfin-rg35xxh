@@ -4,7 +4,7 @@ import pygame
 import requests
 from playback import ControllerInput, PlaybackReporter, PlaybackSession
 
-BUILD = "1.5"
+BUILD = "1.7"
 CONFIG = os.environ.get("JELLYFIN_CONFIG", "/userdata/roms/ports/jellyfinrg35xx/config.json")
 CA_BUNDLE = "/etc/ssl/certs/ca-certificates.crt"
 LOG = logging.getLogger("jellyfin")
@@ -117,7 +117,7 @@ def prepare_playback(config, token, user_id, item, audio_index=None, subtitle_in
         profile = {"Name": "RG35XX H", "MaxStreamingBitrate": max_bitrate, "MaxStaticBitrate": max_bitrate,
                    "SupportedMediaTypes": "Video", "DirectPlayProfiles": [],
                    "TranscodingProfiles": [{"Container": "ts", "Type": "Video", "VideoCodec": "h264", "AudioCodec": "aac", "Protocol": "hls", "Context": "Streaming", "MaxAudioChannels": "2", "MinSegments": 1, "SegmentLength": 3}],
-                   "SubtitleProfiles": [{"Format": "srt", "Method": "Embed"}]}
+                   "SubtitleProfiles": [{"Format": "srt", "Method": "Encode"}]}
         info = requests.post(config["serverUrl"].rstrip("/") + "/Items/" + item_id + "/PlaybackInfo",
                              params={"UserId": user_id, "StartTimeTicks": resume_ticks},
                              headers={"X-Emby-Token": token, "Content-Type": "application/json"},
@@ -133,7 +133,8 @@ def prepare_playback(config, token, user_id, item, audio_index=None, subtitle_in
                    + "&VideoBitrate=" + str(video_bitrate) + "&AudioBitrate=128000&MaxStreamingBitrate=" + str(max_bitrate)
                    + "&TranscodingMaxAudioChannels=2&SegmentContainer=ts"
                    + ("&AudioStreamIndex=" + str(audio_index) if audio_index is not None else "")
-                   + ("&SubtitleStreamIndex=" + str(subtitle_index) if subtitle_index is not None else ""))
+                   + ("&SubtitleStreamIndex=" + str(subtitle_index) + "&SubtitleMethod=Encode"
+                      if subtitle_index is not None else ""))
             probe = requests.get(url, headers={"X-Emby-Token": token}, timeout=4, verify=CA_BUNDLE, stream=True)
             invalid = probe.status_code < 200 or probe.status_code >= 300 or "application/json" in probe.headers.get("content-type", "")
             probe.close()

@@ -191,6 +191,7 @@ class Renderer:
                     pygame.draw.rect(self.screen, ACCENT, (188, y - 3, 420, 25), border_radius=4)
                 self.text(label, 201, y, 105, self.small, TEXT)
                 self.text(value, 315, y, 280, self.small, TEXT)
+            self.footer("D-pad  Choose     A  Change / Play     B  Save and return")
 
     def loading(self, label, modal=True):
         if modal:
@@ -261,7 +262,7 @@ class LibraryUI:
                       {"title": "Next Up", "fetch": self.api.next_up, "empty": "You are all caught up"},
                       {"title": "Continue Watching", "fetch": self.api.resume, "empty": "No unfinished videos"}]
             for view in views:
-                values.append({"title": "Recently Added · " + view.get("Name", "Library"),
+                values.append({"title": "Recently Added in " + view.get("Name", "Library"),
                                "fetch": lambda parent=view["Id"]: self.api.latest(parent)})
             self.rows = Rows(values)
         self.start("Loading My Media...", self.api.views, ready)
@@ -296,7 +297,7 @@ class LibraryUI:
             self.start("Opening " + item.get("Name", "folder") + "...", lambda: self.api.children(item), ready)
         else:
             self.start("Loading details...", lambda: self.api.detail(item),
-                       lambda value: self.pages.append(dict(kind="detail", item=value, options=None)))
+                       lambda value: self.pages.append(dict(kind="detail", item=value, options=None, track_options=None)))
 
     def options_for(self, item):
         streams = ((item.get("MediaSources") or [{}])[0].get("MediaStreams")
@@ -360,12 +361,14 @@ class LibraryUI:
             item = page["item"]
             if item.get("Type") not in ("Movie", "Episode", "Video", "MusicVideo"):
                 return
-            if page.get("options"):
-                options = page["options"]
-                if options["row"] == 1:
+            options = page.get("options") or page.get("track_options")
+            if options:
+                page["track_options"] = options
+            if page.get("options") and options["row"] == 1:
                     options["audio_at"] = (options["audio_at"] + 1) % len(options["audio"]); return
-                if options["row"] == 2:
+            if page.get("options") and options["row"] == 2:
                     options["subtitle_at"] = (options["subtitle_at"] + 1) % len(options["subtitles"]); return
+            if options:
                 audio_index = options["audio"][options["audio_at"]]["index"]
                 subtitle_index = options["subtitles"][options["subtitle_at"]]["index"]
             else:
@@ -389,6 +392,8 @@ class LibraryUI:
             self.pending = None
             self.loading = ""
         elif self.pages and self.pages[-1].get("options"):
+            # Keep the selected streams when returning to the details page.
+            self.pages[-1]["track_options"] = self.pages[-1]["options"]
             self.pages[-1]["options"] = None
         elif self.pages:
             self.pages.pop()
@@ -443,7 +448,9 @@ class LibraryUI:
                         break
                     elif event.button == 6:
                         if self.pages and self.pages[-1]["kind"] == "detail":
-                            self.pages[-1]["options"] = self.options_for(self.pages[-1]["item"])
+                            page = self.pages[-1]
+                            page["options"] = page.get("track_options") or self.options_for(page["item"])
+                            page["track_options"] = page["options"]
                         elif self.pages and self.pages[-1]["kind"] == "list":
                             self.more(self.pages[-1])
                         else:
