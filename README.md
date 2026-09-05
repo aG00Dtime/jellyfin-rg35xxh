@@ -2,6 +2,8 @@
 
 Watch your Jellyfin library on an Anbernic RG35XX H running KNULLI. This is an unofficial, controller-first app built for the handheld's 640×480 screen.
 
+**Tested on the latest KNULLI Scarab release.**
+
 It has a Jellyfin-style home screen with **My Media**, **Next Up**, **Continue Watching**, and **Recently Added** shelves. Folder artwork and media thumbnails load from your own server.
 
 ## See it in action
