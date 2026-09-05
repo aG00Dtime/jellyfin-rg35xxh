@@ -4,7 +4,7 @@ Watch your Jellyfin library on an Anbernic RG35XX H running KNULLI. This is an u
 
 **Tested on the latest KNULLI Scarab release.**
 
-It has a Jellyfin-style home screen with **My Media**, **Next Up**, **Continue Watching**, and **Recently Added** shelves. Folder artwork and media thumbnails load from your own server.
+It has a Jellyfin-style home screen with **My Media**, **Next Up**, **Continue Watching**, and **Recently Added** shelves. Folder artwork and media thumbnails load from your own server. Watched titles display a check badge and partially watched titles show their progress bar.
 
 ## See it in action
 
@@ -37,7 +37,8 @@ For a later update, copy the new file and folder into the same place and allow y
 
 | Where you are | Controls |
 | --- | --- |
-| Home and folders | D-pad moves, **A** opens, **B** goes back, **Start** exits |
+| Home and folders | D-pad moves, **A** opens, **Y** searches (all libraries from Home or the current folder), **B** goes back, **Start** exits |
+| Search | D-pad left/right chooses a character, **A** adds it, **X** deletes it, up/down selects a result, **Y** opens that result |
 | Video | **A** pauses or resumes; **B**, **Start**, or **Select** returns to the app |
 | Video seeking | D-pad left/right skips 10 seconds; L1/R1 skips 30 seconds; L2/R2 skips 60 seconds |
 | Audio and subtitles | **X** cycles audio tracks; **Y** cycles subtitle tracks (including Off) |

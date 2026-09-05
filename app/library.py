@@ -105,6 +105,19 @@ class LibraryAPI:
         more = start + len(items) < total if isinstance(total, int) else len(items) == 30
         return items, total, more
 
+    def search(self, term, parent=None, start=0):
+        """Search a library (or everything the signed-in user can see)."""
+        params = dict(UserId=self.user_id, SearchTerm=term, Recursive="true", StartIndex=start,
+                      Limit=30, Fields=FIELDS, SortBy="SortName", SortOrder="Ascending",
+                      IncludeItemTypes="Movie,Series,Episode,Video,MusicVideo,BoxSet,Folder",
+                      EnableImageTypes="Primary,Thumb,Backdrop")
+        if parent:
+            params["ParentId"] = parent["Id"]
+        result = self.get("/Users/" + self.user_id + "/Items", **params)
+        items = result.get("Items", [])
+        total = result.get("TotalRecordCount", len(items))
+        return items, total, start + len(items) < total
+
     def detail(self, item):
         return self.get("/Users/" + self.user_id + "/Items/" + item["Id"], Fields="MediaSources,MediaStreams,Overview,RunTimeTicks,UserData")
 

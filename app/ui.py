@@ -93,6 +93,13 @@ class Renderer:
         if selected:
             pygame.draw.rect(self.screen, ACCENT, image_rect.inflate(6, 6), 3, border_radius=7)
         data = item.get("UserData") or {}
+        if data.get("Played"):
+            # Match Jellyfin's familiar watched badge without obscuring poster art.
+            badge = (image_rect.right - 15, image_rect.y + 15)
+            pygame.draw.circle(self.screen, (24, 143, 89), badge, 11)
+            pygame.draw.lines(self.screen, (255, 255, 255), False,
+                              [(badge[0] - 5, badge[1]), (badge[0] - 1, badge[1] + 4),
+                               (badge[0] + 6, badge[1] - 5)], 2)
         ticks, duration = data.get("PlaybackPositionTicks", 0), item.get("RunTimeTicks", 0)
         if ticks and duration:
             fraction = max(0, min(1, ticks / duration))
@@ -137,6 +144,31 @@ class Renderer:
                           index == rows.row and first + offset == col)
         self.footer("D-pad  Browse rows     A  Open     X  Refresh     Start  Exit")
 
+    def search(self, page, artwork, loading=False):
+        self.header(False)
+        title = "Search all libraries" if not page.get("parent") else "Search in " + page["parent"].get("Name", "folder")
+        self.text(title, 18, 78, 390, self.heading)
+        query = page.get("query") or ""
+        self.text(query or "Enter a title, series, or episode", 18, 108, 500, self.font,
+                  TEXT if query else MUTED)
+        character = page["alphabet"][page["character"]]
+        self.text("D-pad  <  " + character + "  >", 450, 108, 170, self.small, ACCENT, center=True)
+        items = page.get("items", [])
+        selected = page.get("selection", 0)
+        total = page.get("total")
+        self.text((str(total) + " results") if query else "", 18, 137, 180, self.small, MUTED)
+        if query and not items and not loading:
+            self.text("No matches yet", 18, 210, 604, self.heading, MUTED, center=True)
+        first = max(0, min(selected, max(0, len(items) - 3)))
+        for offset, item in enumerate(items[first:first + 3]):
+            self.card(item, pygame.Rect(18 + offset * 204, 163, 188, 144), artwork,
+                      first + offset == selected, True)
+        if loading:
+            self.spinner(606, 143, 7)
+        self.wrap("A Add character     X Delete     Up/Down Select result     Y Open result", 18, 340, 604, 2,
+                  self.small, MUTED)
+        self.footer("B  Back     Start  Exit")
+
     def listing(self, page, artwork, loading=False):
         self.header(False)
         self.text(page["title"], 18, 79, 480, self.heading)
@@ -158,7 +190,7 @@ class Renderer:
             self.card(item, rect, artwork, first + offset == selected, not portrait)
         if page.get("more"):
             self.text("More titles load as you browse", 18, 411, 580, self.small, MUTED)
-        self.footer("D-pad  Browse     A  Open     B  Back     Start  Exit")
+        self.footer("D-pad  Browse     A  Open     Y  Search here     B  Back     Start  Exit")
 
     def detail(self, item, artwork, status, options=None):
         self.header(False)
@@ -325,6 +357,22 @@ class LibraryUI:
             page["total"], page["more"] = total, bool(more and items)
         self.jobs.submit(lambda: self.api.children(page["parent"], page["next_start"]), done)
 
+    def begin_search(self):
+        parent = self.pages[-1].get("parent") if self.pages and self.pages[-1]["kind"] == "list" else None
+        self.pages.append(dict(kind="search", parent=parent, query="", alphabet="ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789 -",
+                               character=0, items=[], total=0, selection=0, searching=False))
+
+    def update_search(self, page):
+        query = page["query"].strip()
+        page["items"], page["total"], page["selection"] = [], 0, 0
+        if not query:
+            return
+        page["searching"] = True
+        def done(result):
+            page["searching"] = False
+            page["items"], page["total"], _ = result
+        self.start("Searching Jellyfin...", lambda: self.api.search(query, page.get("parent")), done)
+
     def move(self, x, y):
         if self.pending or not self.api:
             return
@@ -332,6 +380,12 @@ class LibraryUI:
             self.rows.move(x, y)
             return
         page = self.pages[-1]
+        if page["kind"] == "search":
+            if x:
+                page["character"] = (page["character"] + x) % len(page["alphabet"])
+            if y and page["items"]:
+                page["selection"] = max(0, min(len(page["items"]) - 1, page["selection"] - y))
+            return
         if page["kind"] == "detail" and page.get("options"):
             options = page["options"]
             if y: options["row"] = max(0, min(2, options["row"] - y))
@@ -352,6 +406,10 @@ class LibraryUI:
             return
         if not self.pages:
             self.open_item(self.rows.selected(), self.rows.row == 0)
+        elif self.pages[-1]["kind"] == "search":
+            page = self.pages[-1]
+            page["query"] += page["alphabet"][page["character"]]
+            self.update_search(page)
         elif self.pages[-1]["kind"] == "list":
             page = self.pages[-1]
             if page["items"]:
@@ -408,6 +466,9 @@ class LibraryUI:
             self.renderer.footer("X  Retry     Start  Exit")
         elif not self.pages:
             self.renderer.home(self.rows, self.artwork, self.load_row)
+        elif self.pages[-1]["kind"] == "search":
+            page = self.pages[-1]
+            self.renderer.search(page, self.artwork, bool(self.pending) or page.get("searching"))
         elif self.pages[-1]["kind"] == "list":
             page = self.pages[-1]
             self.renderer.listing(page, self.artwork, bool(self.pending))
@@ -447,7 +508,12 @@ class LibraryUI:
                         self.activate()
                         break
                     elif event.button == 6:
-                        if self.pages and self.pages[-1]["kind"] == "detail":
+                        if self.pages and self.pages[-1]["kind"] == "search":
+                            page = self.pages[-1]
+                            if page["query"]:
+                                page["query"] = page["query"][:-1]
+                                self.update_search(page)
+                        elif self.pages and self.pages[-1]["kind"] == "detail":
                             page = self.pages[-1]
                             page["options"] = page.get("track_options") or self.options_for(page["item"])
                             page["track_options"] = page["options"]
@@ -455,6 +521,13 @@ class LibraryUI:
                             self.more(self.pages[-1])
                         else:
                             self.refresh()
+                    elif event.button == 7:
+                        if self.pages and self.pages[-1]["kind"] == "search":
+                            page = self.pages[-1]
+                            if page["items"]:
+                                self.open_item(page["items"][page["selection"]])
+                        else:
+                            self.begin_search()
                 elif event.type == pygame.KEYDOWN:
                     if event.key == pygame.K_ESCAPE:
                         self.running = False
@@ -463,6 +536,18 @@ class LibraryUI:
                         break
                     elif event.key == pygame.K_BACKSPACE:
                         self.back()
+                    elif event.key == pygame.K_x and self.pages and self.pages[-1]["kind"] == "search":
+                        page = self.pages[-1]
+                        if page["query"]:
+                            page["query"] = page["query"][:-1]
+                            self.update_search(page)
+                    elif event.key == pygame.K_y:
+                        if self.pages and self.pages[-1]["kind"] == "search":
+                            page = self.pages[-1]
+                            if page["items"]:
+                                self.open_item(page["items"][page["selection"]])
+                        else:
+                            self.begin_search()
                     elif event.key in (pygame.K_LEFT, pygame.K_RIGHT, pygame.K_UP, pygame.K_DOWN):
                         self.move(*{pygame.K_LEFT: (-1, 0), pygame.K_RIGHT: (1, 0), pygame.K_UP: (0, 1), pygame.K_DOWN: (0, -1)}[event.key])
             if self.direction != (0, 0) and time.monotonic() >= self.repeat_at:
