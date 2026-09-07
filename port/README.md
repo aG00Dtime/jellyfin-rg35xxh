@@ -25,3 +25,5 @@ Credentials are encrypted on the device using a device-local key. Never share th
 Automatic KNULLI idle sleep is paused while Jellyfin is open and returns to normal when you exit.
 
 Unfinished items resume from Jellyfin's saved position. Episode playback advances automatically to the next episode after a short loading screen. Library folders load more results automatically as you reach the end of the current page.
+
+The app requests server-side H.264/AAC HLS transcoding by default for reliable RG35XX H playback. The quality setting controls the requested stream size and bitrate, so this uses server CPU and may create temporary transcoding files. A direct-stream fallback may be used if the requested HLS stream cannot be provided.

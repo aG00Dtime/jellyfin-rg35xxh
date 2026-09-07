@@ -47,7 +47,7 @@ For a later update, copy the new file and folder into the same place and allow y
 
 On a movie or episode details page, press **X** to open Play Options. Choose an audio track or subtitle track with the D-pad, then press **A** to play with those selections. During playback, **X** and **Y** can also cycle the active audio and subtitle tracks.
 
-The app reports playback to Jellyfin while you watch and when you stop, so **Continue Watching**, watched indicators, and resume position stay in sync. Selecting an unfinished item resumes it from its saved position.
+The app requests server-side H.264/AAC HLS transcoding by default because that is the most reliable format for the RG35XX H. The quality setting controls the requested stream size and bitrate, so playback uses server CPU and may create temporary transcoding files. If the server cannot provide the requested HLS stream, the app can fall back to a direct stream. The app reports playback to Jellyfin while you watch and when you stop, so **Continue Watching**, watched indicators, and resume position stay in sync. Selecting an unfinished item resumes it from its saved position.
 
 When an episode finishes successfully, the next episode starts automatically with a short loading screen. Library folders fetch additional pages automatically as you approach the end of the current page.
 
@@ -62,6 +62,7 @@ This is a community project and it is still evolving. It has been tested on an R
 - **No connection:** confirm the handheld is on Wi-Fi and that the server URL is correct. A bare domain uses HTTPS by default.
 - **Login failed:** open Settings and re-enter the password.
 - **Video is choppy:** open Settings and choose `360p` or `480p`. The RG35XX H is happiest with a modest H.264/AAC stream.
+- **The server is transcoding:** this is expected. The app requests H.264/AAC HLS for handheld compatibility; lower the quality in Settings if the server struggles.
 - **No artwork yet:** give the home screen a moment. Small thumbnails download in the background and are cached on the SD card.
 - **A new release does not appear:** exit back to the KNULLI menu and launch it again.
 
