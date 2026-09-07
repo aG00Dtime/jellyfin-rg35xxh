@@ -28,7 +28,7 @@ This frame comes directly from the recorded RG35XX H demo, with artwork loaded f
 3. Open the KNULLI data card, then open `roms/ports`.
 4. Copy both the file and the folder into `roms/ports`.
 5. Put the card back in the handheld. In KNULLI, open **Ports** and launch **Jellyfin RG35XX**.
-6. On first launch, enter your server URL, username, and password with the controller keyboard. A bare domain is automatically treated as HTTPS; explicit `http://` and `https://` URLs are respected.
+6. On first launch, use the built-in login screen to enter your server URL, username, and password with the controller keyboard. A bare domain is automatically treated as HTTPS; explicit `http://` and `https://` URLs are respected.
 
 For a later update, copy the new file and folder into the same place and allow your computer to merge the folder. Do **not** delete `config.json`; release packages deliberately do not contain it.
 
@@ -36,15 +36,20 @@ For a later update, copy the new file and folder into the same place and allow y
 
 | Where you are | Controls |
 | --- | --- |
-| Home and folders | D-pad moves, **A** opens, **B** goes back, **R1** opens Settings, **Start** exits |
+| Home and folders | D-pad moves, **A** opens, **B** goes back, **Y** searches, **R1** opens Settings, **Start** exits |
 | Settings | Change quality, edit connection details, or choose Logout; Logout asks for confirmation and keeps the server and username |
 | Login keyboard | D-pad chooses, **A** types, **R1** toggles caps/symbols, **X** inserts a space, **Y** deletes, **Start** saves the field, **B** cancels |
+| Search keyboard | D-pad chooses, **A** types, **R1** toggles caps/symbols, **X** inserts a space, **Y** deletes, **Start** searches, **B** cancels |
 | Video | **A** pauses or resumes; **B**, **Start**, or **Select** returns to the app |
 | Video seeking | D-pad left/right skips 10 seconds; L1/R1 skips 30 seconds; L2/R2 skips 60 seconds |
 | Audio and subtitles | **X** cycles audio tracks; **Y** cycles subtitle tracks (including Off) |
 | Volume | The handheld's volume buttons still control KNULLI volume |
 
-The app reports playback to Jellyfin while you watch and when you stop, so **Continue Watching** and resume position stay in sync.
+On a movie or episode details page, press **X** to open Play Options. Choose an audio track or subtitle track with the D-pad, then press **A** to play with those selections. During playback, **X** and **Y** can also cycle the active audio and subtitle tracks.
+
+The app reports playback to Jellyfin while you watch and when you stop, so **Continue Watching**, watched indicators, and resume position stay in sync. Selecting an unfinished item resumes it from its saved position.
+
+When an episode finishes successfully, the next episode starts automatically with a short loading screen. Library folders fetch additional pages automatically as you approach the end of the current page.
 
 Jellyfin temporarily pauses KNULLI's automatic idle sleep while the app is open, then restores it when you exit.
 
@@ -57,7 +62,7 @@ This is a community project and it is still evolving. It has been tested on an R
 - **No connection:** confirm the handheld is on Wi-Fi and that the server URL is correct. A bare domain uses HTTPS by default.
 - **Login failed:** open Settings and re-enter the password.
 - **Video is choppy:** open Settings and choose `360p` or `480p`. The RG35XX H is happiest with a modest H.264/AAC stream.
-- **No artwork yet:** give the home screen a moment. Images download in the background and are cached on the SD card.
+- **No artwork yet:** give the home screen a moment. Small thumbnails download in the background and are cached on the SD card.
 - **A new release does not appear:** exit back to the KNULLI menu and launch it again.
 
 ## Keep your account private
