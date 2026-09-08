@@ -4,7 +4,7 @@ import pygame
 import requests
 from playback import ControllerInput, PlaybackReporter, PlaybackSession
 
-BUILD = "2.1.2"
+BUILD = "2.1.3"
 CONFIG = os.environ.get("JELLYFIN_CONFIG", "/userdata/roms/ports/jellyfinrg35xx/config.json")
 CONFIG_KEY = CONFIG + ".key"
 CA_BUNDLE = "/etc/ssl/certs/ca-certificates.crt"
@@ -16,9 +16,16 @@ def normalize_server_url(value):
         value = "https://" + value
     return value
 
+def authorization_value(token=None):
+    value = 'MediaBrowser Client="RG35XX Jellyfin", Device="RG35XX H", DeviceId="rg35xxh", Version="' + BUILD + '"'
+    return value + ', Token="' + token + '"' if token else value
+
 def auth_headers(token=None):
+    modern = authorization_value(token)
     headers = {"Content-Type": "application/json", "Accept": "application/json",
-               "X-Emby-Authorization": 'MediaBrowser Client="RG35XX Jellyfin", Device="RG35XX H", DeviceId="rg35xxh", Version="' + BUILD + '"'}
+               "Authorization": modern,
+               # Keep the legacy headers for Jellyfin versions that still accept them.
+               "X-Emby-Authorization": authorization_value()}
     if token:
         headers["X-Emby-Token"] = token
     return headers
@@ -90,13 +97,13 @@ def authenticate(config):
 
 def fetch_items(config, token, user_id, extra="", start=0):
     url = config["serverUrl"].rstrip("/") + "/Users/" + user_id + "/Items?SortBy=SortName&Recursive=true&StartIndex=" + str(start) + "&Limit=30" + extra
-    response = requests.get(url, headers={"X-Emby-Token": token, "Accept": "application/json"}, timeout=20, verify=CA_BUNDLE)
+    response = requests.get(url, headers=auth_headers(token), timeout=20, verify=CA_BUNDLE)
     response.raise_for_status()
     return response.json().get("Items", [])
 
 def fetch_views(config, token, user_id):
     url = config["serverUrl"].rstrip("/") + "/Users/" + user_id + "/Views"
-    response = requests.get(url, headers={"X-Emby-Token": token}, timeout=20, verify=CA_BUNDLE)
+    response = requests.get(url, headers=auth_headers(token), timeout=20, verify=CA_BUNDLE)
     response.raise_for_status(); return response.json().get("Items", [])
 
 def fetch_children(config, token, user_id, parent_id):
@@ -104,13 +111,13 @@ def fetch_children(config, token, user_id, parent_id):
 
 def fetch_seasons(config, token, user_id, show_id):
     url = config["serverUrl"].rstrip("/") + "/Shows/" + show_id + "/Seasons?UserId=" + user_id + "&Fields=PrimaryImageAspectRatio"
-    response = requests.get(url, headers={"X-Emby-Token": token, "Accept": "application/json"}, timeout=20, verify=CA_BUNDLE)
+    response = requests.get(url, headers=auth_headers(token), timeout=20, verify=CA_BUNDLE)
     response.raise_for_status()
     return response.json().get("Items", [])
 
 def fetch_episodes(config, token, user_id, show_id, season_id):
     url = config["serverUrl"].rstrip("/") + "/Shows/" + show_id + "/Episodes?UserId=" + user_id + "&SeasonId=" + season_id + "&Fields=Overview,RunTimeTicks,PrimaryImageAspectRatio"
-    response = requests.get(url, headers={"X-Emby-Token": token, "Accept": "application/json"}, timeout=20, verify=CA_BUNDLE)
+    response = requests.get(url, headers=auth_headers(token), timeout=20, verify=CA_BUNDLE)
     response.raise_for_status()
     return response.json().get("Items", [])
 
@@ -122,7 +129,7 @@ def thumbnail(config, token, item, cache, image_cache):
     try:
         if not os.path.exists(path):
             url = config["serverUrl"].rstrip("/") + "/Items/" + item_id + "/Images/Primary?maxWidth=120&quality=75"
-            response = requests.get(url, headers={"X-Emby-Token": token}, timeout=15, verify=CA_BUNDLE)
+            response = requests.get(url, headers=auth_headers(token), timeout=15, verify=CA_BUNDLE)
             response.raise_for_status()
             with open(path, "wb") as f: f.write(response.content)
         image_cache[item_id] = pygame.image.load(path).convert()
@@ -154,7 +161,7 @@ def prepare_playback(config, token, user_id, item, audio_index=None, subtitle_in
     quality = config.get("quality", "480p").lower()
     profiles = {"360p": (640, 360, 900000, 1200000), "480p": (854, 480, 1400000, 1800000), "720p": (1280, 720, 2800000, 3400000), "1080p": (1920, 1080, 5000000, 6000000)}
     width, height, video_bitrate, max_bitrate = profiles.get(quality, profiles["480p"])
-    url = config["serverUrl"].rstrip("/") + "/Videos/" + item_id + "/stream?static=true&api_key=" + token
+    url = config["serverUrl"].rstrip("/") + "/Videos/" + item_id + "/stream?static=true&ApiKey=" + token
     play_method = "DirectPlay"
     media_source_id = item.get("MediaSourceId")
     try:
@@ -164,14 +171,14 @@ def prepare_playback(config, token, user_id, item, audio_index=None, subtitle_in
                    "SubtitleProfiles": [{"Format": "srt", "Method": "Encode"}]}
         info = requests.post(config["serverUrl"].rstrip("/") + "/Items/" + item_id + "/PlaybackInfo",
                              params={"UserId": user_id, "StartTimeTicks": resume_ticks},
-                             headers={"X-Emby-Token": token, "Content-Type": "application/json"},
+                             headers=auth_headers(token),
                              json={"DeviceProfile": profile}, timeout=6, verify=CA_BUNDLE)
         info.raise_for_status(); info_value = info.json(); sources = info_value.get("MediaSources", [])
         session_id = info_value.get("PlaySessionId") or session_id
         if sources:
             source_id = sources[0].get("Id")
             media_source_id = source_id
-            url = (config["serverUrl"].rstrip("/") + "/Videos/" + item_id + "/master.m3u8?api_key=" + token
+            url = (config["serverUrl"].rstrip("/") + "/Videos/" + item_id + "/master.m3u8?ApiKey=" + token
                    + "&MediaSourceId=" + str(source_id) + "&DeviceId=rg35xxh&PlaySessionId=" + session_id
                    + "&VideoCodec=h264&AudioCodec=aac&MaxWidth=" + str(width) + "&MaxHeight=" + str(height)
                    + "&VideoBitrate=" + str(video_bitrate) + "&AudioBitrate=128000&MaxStreamingBitrate=" + str(max_bitrate)
@@ -179,11 +186,11 @@ def prepare_playback(config, token, user_id, item, audio_index=None, subtitle_in
                    + ("&AudioStreamIndex=" + str(audio_index) if audio_index is not None else "")
                    + ("&SubtitleStreamIndex=" + str(subtitle_index) + "&SubtitleMethod=Encode"
                       if subtitle_index is not None else ""))
-            probe = requests.get(url, headers={"X-Emby-Token": token}, timeout=4, verify=CA_BUNDLE, stream=True)
+            probe = requests.get(url, headers=auth_headers(token), timeout=4, verify=CA_BUNDLE, stream=True)
             invalid = probe.status_code < 200 or probe.status_code >= 300 or "application/json" in probe.headers.get("content-type", "")
             probe.close()
             if invalid:
-                url = config["serverUrl"].rstrip("/") + "/Videos/" + item_id + "/stream?static=true&api_key=" + token
+                url = config["serverUrl"].rstrip("/") + "/Videos/" + item_id + "/stream?static=true&ApiKey=" + token
             else:
                 play_method = "Transcode"
     except Exception:
@@ -195,7 +202,7 @@ def prepare_playback(config, token, user_id, item, audio_index=None, subtitle_in
                 "--input-terminal=no", "--input-default-bindings=no", "--input-vo-keyboard=no",
                 "--osd-font=DejaVu Sans", "--osd-font-size=22",
                 "--input-ipc-server=" + ipc_path, "--hwdec=auto-safe", "--framedrop=vo", "--cache=yes",
-                "--http-header-fields=X-Emby-Token: " + token,
+                "--http-header-fields=Authorization: " + authorization_value(token),
                 "--cache-pause=no", "--video-sync=audio", "--audio-buffer=1",
                 "--cache-secs=30", "--demuxer-max-bytes=128MiB", "--demuxer-max-back-bytes=64MiB"]
     if resume_seconds > 3: mpv_args.append("--start=" + str(resume_seconds))

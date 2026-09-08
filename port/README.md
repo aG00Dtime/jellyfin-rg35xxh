@@ -2,6 +2,8 @@
 
 An unofficial controller-first Jellyfin client for the Anbernic RG35XX H running KNULLI.
 
+Client build `2.1.3` targets **Jellyfin Server 12.0**. Jellyfin Server **10.11.x** is the older compatibility line. Other server versions are not currently verified.
+
 ## First-time setup
 
 1. Copy the `Jellyfin RG35XX.sh` file and the `jellyfinrg35xx` folder into `roms/ports` on the KNULLI data card.

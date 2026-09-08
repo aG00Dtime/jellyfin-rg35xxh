@@ -6,6 +6,10 @@ Watch your Jellyfin library on an Anbernic RG35XX H running KNULLI. This is an u
 
 It has a Jellyfin-style home screen with **My Media**, **Next Up**, **Continue Watching**, and **Recently Added** shelves. Folder artwork and media thumbnails load from your own server. Watched titles display a check badge and partially watched titles show their progress bar.
 
+## Jellyfin server compatibility
+
+Client build `2.1.3` targets **Jellyfin Server 12.0** and uses its current authorization format. Jellyfin Server **10.11.x** is the older compatibility line. Other versions may work, but are not currently verified; include the exact server version when reporting a problem.
+
 ## See it in action
 
 This frame comes directly from the recorded RG35XX H demo, with artwork loaded from Jellyfin. Select it to play the full video in your browser.
@@ -61,6 +65,7 @@ This is a community project and it is still evolving. It has been tested on an R
 
 - **No connection:** confirm the handheld is on Wi-Fi and that the server URL is correct. A bare domain uses HTTPS by default.
 - **Login failed:** open Settings and re-enter the password.
+- **Jellyfin 12 login or playback failure:** update to client build `2.1.3` or newer. Older client builds use authorization forms that Jellyfin 12 disables by default.
 - **Video is choppy:** open Settings and choose `360p` or `480p`. The RG35XX H is happiest with a modest H.264/AAC stream.
 - **The server is transcoding:** this is expected. The app requests H.264/AAC HLS for handheld compatibility; lower the quality in Settings if the server struggles.
 - **No artwork yet:** give the home screen a moment. Small thumbnails download in the background and are cached on the SD card.
